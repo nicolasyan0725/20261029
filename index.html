@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>角色動畫控制</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            /* 預設背景，JS 載入後會隨機覆蓋 */
+            background-color: #f0f0f0; 
+        }
+        canvas {
+            /* 讓畫布呈現去背效果，與隨機背景融合 */
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    // 隨機產生背景顏色 (使用 HSL 確保顏色柔和明亮)
+    const randomHue = Math.floor(Math.random() * 360);
+    document.body.style.backgroundColor = `hsl(${randomHue}, 70%, 80%)`;
+
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // 載入圖片 (請確保路徑與你的資料夾結構一致)
+    const imgIdle = new Image();
+    imgIdle.src = 'C1/pose1/pose1.png'; // 待機圖檔
+    
+    const imgWalk = new Image();
+    imgWalk.src = 'C1/walk/walk.png';   // 走路圖檔
+
+    // 確保兩張圖片都載入完成後再開始動畫
+    let imagesLoaded = 0;
+    function checkLoad() {
+        imagesLoaded++;
+        if (imagesLoaded === 2) {
+            requestAnimationFrame(animate);
+        }
+    }
+    imgIdle.onload = checkLoad;
+    imgWalk.onload = checkLoad;
+
+    // 動畫與角色狀態設定
+    const numFrames = 10; // 圖片總共有 10 個影格
+    let currentFrame = 0;
+    let frameTimer = 0;
+    const animationSpeed = 5; // 數字越大動畫越慢
+
+    let charX = canvas.width / 2 - 50;
+    const charY = canvas.height / 2 - 100;
+    const moveSpeed = 4;
+
+    let isWalking = false;
+    let facingRight = true;
+
+    // 監聽鍵盤按下事件
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') {
+            isWalking = true;
+            facingRight = true;
+        } else if (e.key === 'ArrowLeft') {
+            isWalking = true;
+            facingRight = false;
+        }
+    });
+
+    // 監聽鍵盤放開事件
+    window.addEventListener('keyup', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+            isWalking = false;
+        }
+    });
+
+    // 動畫主迴圈
+    function animate() {
+        // 清除畫布，準備繪製下一幀
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // 更新角色位置
+        if (isWalking) {
+            charX += facingRight ? moveSpeed : -moveSpeed;
+        }
+
+        // 更新影格
+        frameTimer++;
+        if (frameTimer > animationSpeed) {
+            currentFrame = (currentFrame + 1) % numFrames;
+            frameTimer = 0;
+        }
+
+        // 根據狀態選擇當前要播放的圖片
+        const currentImg = isWalking ? imgWalk : imgIdle;
+        
+        // 計算單一影格的寬高
+        const frameWidth = currentImg.width / numFrames;
+        const frameHeight = currentImg.height;
+
+        ctx.save();
+        
+        // 處理向左走時的圖片水平翻轉
+        if (!facingRight) {
+            ctx.translate(charX + frameWidth, charY);
+            ctx.scale(-1, 1);
+            ctx.drawImage(
+                currentImg,
+                currentFrame * frameWidth, 0, frameWidth, frameHeight, // 來源裁切位置
+                0, 0, frameWidth, frameHeight // 繪製在畫布上的位置 (因 translate 已移動過原點)
+            );
+        } else {
+            ctx.drawImage(
+                currentImg,
+                currentFrame * frameWidth, 0, frameWidth, frameHeight,
+                charX, charY, frameWidth, frameHeight
+            );
+        }
+        
+        ctx.restore();
+
+        // 遞迴呼叫下一幀
+        requestAnimationFrame(animate);
+    }
+</script>
+</body>
+</html>
